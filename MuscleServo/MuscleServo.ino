@@ -1,8 +1,66 @@
 
 #include <Servo.h>
+#include <math.h>
 
 Servo thumb, fingers;
 
+
+//массив для определения разброса значений 
+double * mas;
+int massSize = 100;
+
+void setup() {
+  // initialize the serial communication:
+  Serial.begin(9600);
+  pinMode(10, INPUT); // Setup for leads off detection LO +
+  pinMode(11, INPUT); // Setup for leads off detection LO -
+  pinMode(9, OUTPUT);  
+  
+  mas = new double[massSize];
+}
+//функция расчёта разброса значений в массиве
+double dispers(){
+    double MatOj = 0;
+    double Disp = 0;
+    for(int i=0; i<massSize; i++)
+        MatOj = mas[i] + MatOj;
+    MatOj = MatOj/(double)massSize; //Математическое ожидание
+ 
+    for(int i=0; i<massSize; i++)
+        Disp = pow((mas[i] - MatOj),2.0) + Disp;
+    Disp = Disp/(massSize-1.0); //Дисперсия   
+    return Disp;
+}
+//функция очистки массива
+void clearMass(){
+  for(int i=0; i<massSize; i++)mas[i] = 0;
+}
+
+void loop() {
+  int count = 0;//сброс счётчика
+  while(count < massSize){ //накапливаем массив
+    if((digitalRead(10) == 1)||(digitalRead(11) == 1)){
+      Serial.println('!');
+      count = 0;
+      clearMass();
+    }
+    else{
+      // send the value of analog input 0:
+        mas[count] = analogRead(A0);
+    }
+    //Wait for a bit to keep serial data from saturating
+    delay(1);
+    count++;
+  }
+  double disp = dispers(); //считаем отклонение
+  clearMass();
+  if(disp <= 0){
+    Serial.println(0);
+  }else Serial.println(disp);
+  int val = map((int)disp, 1000, 50000, 0, 255);
+  analogWrite(9, val);
+}
+/*
 int analogpin = 3;
 int val = 0;
   void setup()
@@ -27,4 +85,4 @@ else{
     delay(100);
   }
 }
-
+*/
